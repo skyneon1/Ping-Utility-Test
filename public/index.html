@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Network Utility</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: #f4f7fc;
+      padding: 30px;
+      text-align: center;
+      color: #333;
+    }
+
+    h1 {
+      font-size: 36px;
+      margin-bottom: 20px;
+    }
+
+    .container {
+      width: 80%;
+      margin: 0 auto;
+      max-width: 1200px;
+    }
+
+    .input-group {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 30px;
+      gap: 15px;
+    }
+
+    input, select, button {
+      padding: 12px 20px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      cursor: pointer;
+      background-color: #4CAF50;
+      color: white;
+      transition: background-color 0.3s;
+    }
+
+    button.stop {
+      background-color: #f44336;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    .result-box {
+      margin-top: 30px;
+      padding: 20px;
+      background-color: #e8f5e9;
+      border-radius: 5px;
+      display: inline-block;
+      width: 100%;
+      max-width: 500px;
+      text-align: left;
+      font-size: 18px;
+    }
+
+    .result-box.error {
+      background-color: #fce4ec;
+      border: 1px solid #f8bbd0;
+    }
+
+    .live-output {
+      font-size: 16px;
+      color: #555;
+      padding: 10px;
+      background-color: #f1f1f1;
+      border-radius: 5px;
+      margin-top: 10px;
+      display: none;
+    }
+
+    .live-output pre {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .action-buttons {
+      margin-top: 30px;
+    }
+
+    .action-buttons button {
+      margin-right: 15px;
+    }
+
+    .status {
+      margin-top: 15px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Network Utility</h1>
+  <div class="container">
+    <div class="input-group">
+      <input type="text" id="host" value="google.com" placeholder="Enter host (e.g., google.com)">
+      <button id="pingButton" onclick="startPing()">Start Ping</button>
+      <button id="tracerouteButton" onclick="startTraceroute()">Start Traceroute</button>
+      <button id="connectionsButton" onclick="getActiveConnections()">Get Active Connections</button>
+    </div>
+
+    <div class="live-output" id="pingOutput"></div>
+    <div class="live-output" id="tracerouteOutput"></div>
+    <div class="live-output" id="connectionsOutput"></div>
+
+    <div id="status" class="status"></div>
+  </div>
+
+  <script>
+    let pingInterval;
+    
+    async function startPing() {
+      const host = document.getElementById('host').value;
+      const resultElement = document.getElementById('pingOutput');
+      resultElement.style.display = 'block';
+      resultElement.textContent = `Pinging ${host}...`;
+
+      const response = await fetch(`/start-ping?host=${host}`);
+      const data = await response.json();
+
+      if (data.status === 'success') {
+        resultElement.textContent = `Started pinging ${host}.`;
+      } else {
+        resultElement.textContent = `Error: ${data.message}`;
+      }
+
+      pingInterval = setInterval(async () => {
+        const res = await fetch(`/ping?host=${host}`);
+        const pingData = await res.json();
+        if (pingData.status === 'success') {
+          resultElement.textContent = `Ping to ${host}: ${pingData.time} ms`;
+        } else {
+          resultElement.textContent = `Host ${host} is not reachable.`;
+        }
+      }, 1000);
+    }
+
+    async function startTraceroute() {
+      const host = document.getElementById('host').value;
+      const resultElement = document.getElementById('tracerouteOutput');
+      resultElement.style.display = 'block';
+      resultElement.textContent = `Running traceroute to ${host}...`;
+
+      const response = await fetch(`/traceroute?host=${host}`);
+      const data = await response.json();
+
+      if (data.status === 'success') {
+        resultElement.textContent = `Traceroute to ${host}:\n${data.trace}`;
+      } else {
+        resultElement.textContent = `Error: ${data.message}`;
+      }
+    }
+
+    async function getActiveConnections() {
+      const resultElement = document.getElementById('connectionsOutput');
+      resultElement.style.display = 'block';
+      resultElement.textContent = 'Fetching active connections...';
+
+      const response = await fetch(`/active-connections`);
+      const data = await response.json();
+
+      if (data.status === 'success') {
+        resultElement.textContent = `Active Connections:\n${data.connections}`;
+      } else {
+        resultElement.textContent = `Error: ${data.message}`;
+      }
+    }
+
+    async function stopPing() {
+      clearInterval(pingInterval);
+      const resultElement = document.getElementById('pingOutput');
+      const response = await fetch(`/stop-ping`);
+      const data = await response.json();
+      resultElement.textContent = data.message;
+    }
+  </script>
+</body>
+</html>
